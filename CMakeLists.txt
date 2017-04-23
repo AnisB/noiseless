@@ -45,3 +45,12 @@ add_subdirectory(${TEST})
 
 # Adding the programs if we should
 #add_subdirectory(${PROGRAM})
+
+IF(WIN32)
+  file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/kernel" kernels)
+  # file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/program/kernel" programData)
+  file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/test/kernel" testData)
+
+  # execute_process( COMMAND cmd.exe /c mklink /D ${programData} ${kernels})
+  execute_process( COMMAND cmd.exe /c mklink /D ${testData} ${kernels})
+ENDIF(WIN32)

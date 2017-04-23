@@ -17,7 +17,7 @@ namespace noiseless
 	{
 		Matrix4 result;
 		set_identity(result);
-		float f = 1/tan(parFovy*3.14/360.0);
+		float f = 1.0f/tan(parFovy * 3.14f / 360.0f);
 		result.m[0] = f/parAspect;
 		result.m[5] = f;
 		result.m[10] = (parFar+parNear)/(parNear-parFar);
@@ -44,7 +44,7 @@ namespace noiseless
 	void set_zero(Matrix4& _mat)
 	{
 		// MEM set
-		std::fill_n(_mat.m, 16, 0);
+		std::fill_n(_mat.m, 16, 0.0f);
 	}
 
 	Vector3 translation(const Matrix4& _mat)

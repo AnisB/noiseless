@@ -1,0 +1,10 @@
+__kernel void process(__global float* A, __global float* B, const uint num_elements)
+{
+	int id = get_global_id(0);
+	int num_workers = get_global_size(0);
+
+	for(int i = id; i < num_elements; i+=num_workers)
+	{
+		B[i] = A[i] * A[i];
+	}
+}
