@@ -13,17 +13,15 @@ namespace noiseless
 		return result;
 	}
 
-	Matrix4 perspective(float parFovy, float parAspect, float parNear, float parFar)
+	void set_perspective(Matrix4& matrix, float parFovy, float parAspect, float parNear, float parFar)
 	{
-		Matrix4 result;
-		set_identity(result);
+		set_identity(matrix);
 		float f = 1.0f/tan(parFovy * 3.14f / 360.0f);
-		result.m[0] = f/parAspect;
-		result.m[5] = f;
-		result.m[10] = (parFar+parNear)/(parNear-parFar);
-		result.m[11] = (2*parFar*parNear)/(parNear-parFar);
-		result.m[14] = -1;
-		return result;
+		matrix.m[0] = f/parAspect;
+		matrix.m[5] = f;
+		matrix.m[10] = (parFar+parNear)/(parNear-parFar);
+		matrix.m[11] = (2*parFar*parNear)/(parNear-parFar);
+		matrix.m[14] = -1;
 	}
 
 	void set_identity(Matrix4& _mat)

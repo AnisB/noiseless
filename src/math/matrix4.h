@@ -30,7 +30,7 @@ namespace noiseless
 
 	void set_identity(Matrix4& _matrix);
 	void set_zero(Matrix4& _matrix);
-	Matrix4 perspective(float parFovy, float parAspect, float parNear, float parFar);
+	void set_perspective(Matrix4& matrix, float parFovy, float parAspect, float parNear, float parFar);
 
 	Vector3 translation(const Matrix4& _matrix);
 	Vector3 x_axis(const Matrix4& _matrix);

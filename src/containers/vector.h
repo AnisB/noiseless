@@ -2,7 +2,6 @@
 #define VECTOR_H
 
 // Library includes
-#include "base/common.h"
 #include "memory/common.h"
 
 // External includes

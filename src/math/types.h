@@ -16,6 +16,9 @@
 #ifndef MATH_TYPES_H
 #define MATH_TYPES_H
 
+// External includes
+#include <stdint.h>
+
 namespace noiseless
 {
 	// Vector types
@@ -36,15 +39,15 @@ namespace noiseless
 	// Int
 	struct IVector2
 	{
-		int x,y;
+		uint32_t x, y;
 	};
 	struct IVector3
 	{
-		int x,y,z;
+		uint32_t x, y, z;
 	};
 	struct IVector4
 	{
-		int x,y,z,w;
+		uint32_t x, y, z, w;
 	};
 
 	struct Matrix3

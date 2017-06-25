@@ -1,0 +1,17 @@
+__kernel void process(__global const float3* verts, const uint num_verts,
+					  __global const float3* normals, const uint num_normals,
+					  __global const uint3* faces, const uint num_faces,
+					  __global float* surface_area)
+{
+	int id = get_global_id(0);
+	int num_workers = get_global_size(0);
+
+	for(int i = id; i < num_faces; i+=num_workers)
+	{
+		const uint3 current_face = faces[i];
+		const float3 edge0 = verts[current_face[1]] - verts[current_face[0]];
+		const float3 edge1 = verts[current_face[2]] - verts[current_face[0]];
+		//surface_area[i] = length(cross(edge0, edge1));
+		surface_area[i] = (float)current_face[0];
+	}
+}

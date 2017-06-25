@@ -1,0 +1,64 @@
+#define EPSILON 0.000001f
+
+struct Ray
+{
+	float3 origin;
+	float3 dir;
+};
+
+bool triangle_ray_intersection(const float3 v0, const float3 v1, const float3 v2, const float3 origin, const float3 dir)
+{
+	// Compute the edges
+	float3 e1 = v1 - v0;
+	float3 e2 = v2 - v0;
+
+	// Check if a local basis can be defined
+	float3 pvec = cross(dir, e2);
+	float det = dot(pvec,e1);
+	if (det < EPSILON && det > -EPSILON )
+	{
+		return false;
+	}
+
+	// Check if intersection is happening in the rectangle
+	float inv_det = 1.0f / det;
+	float3 tvec = orig - v1;
+	float u = inv_det * dot(tvec,pvec);
+	if (u < 0.0f || u > 1.0f)
+	{
+		return false;
+	}
+
+	float3 qvec = cross(tvec, e1);
+	float v = inv_det* dot(qvec,dir);
+	if (v < 0.0f || u+v > 1.0f)
+	{
+		return false;
+	}
+	return true;
+}
+
+__kernel void process(__global float3* frame_buffer, 
+					  __global struct Ray* ray_array, const uint num_rays, 
+					  __global struct float3* vertices, const uint num_vertices,
+					  __global struct ifloat3* indexes, const uint num_triangles)
+{
+	int id = get_global_id(0);
+	int num_workers = get_global_size(0);
+
+	for(int i = id; i < num_rays; i+=num_workers)
+	{
+		float intersection_distance =  FLT_MAX;
+		for(int tri_idx = 0; tri_idx < num_triangles; tri_idx += num_workers)
+		{
+			const ifloat3 current_triangle = indexes[tri_idx];
+
+			float inter_distance = triangle_ray_intersection(vertices[current_triangle.x], vertices[current_triangle.y], vertices[current_triangle.z], ray_array[i].origin,ray_array[i].dir);
+
+			if(current_inter  < intersection_distance)
+			{
+				intersection_distance = inter_distance;
+			}
+		}
+	}
+}
