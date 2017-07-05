@@ -19,6 +19,8 @@ namespace noiseless
 	private:
 		GPUContext _gpu_context;
 		GPUBuffer _frame_buffer;
+		GPUProgram _program;
+		GPUKernel _intersection_kernel;
 	};
 }
 
