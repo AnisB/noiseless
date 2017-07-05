@@ -39,11 +39,14 @@ GENERATE_LIB("${SOURCES}/math" math "noiseless")
 GENERATE_LIB("${SOURCES}/core" core "noiseless")
 GENERATE_LIB("${SOURCES}/geometry" geometry "noiseless")
 GENERATE_LIB("${SOURCES}/render" render "noiseless")
+GENERATE_LIB("${SOURCES}/tools" tools "noiseless")
 
-SET(CORE_LIBS ${CORE_LIBS} base containers memory math core geometry render)
+SET(CORE_LIBS ${CORE_LIBS} base containers memory math core geometry render tools)
 
 # Adding the tests if we should
-add_subdirectory(${TEST})
+if(TESTS)
+  add_subdirectory(${TEST})
+endif()
 
 # Adding the programs if we should
 #add_subdirectory(${PROGRAM})
