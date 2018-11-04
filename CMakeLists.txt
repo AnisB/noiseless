@@ -1,61 +1,47 @@
-cmake_minimum_required(VERSION 3.0.2)
-
+cmake_minimum_required(VERSION 3.2)
 project(noiseless)
 
+# Declare the global variables for the cmake project
+set(BENTO_SDK_ROOT ${PROJECT_SOURCE_DIR}/bento)
+set(NOISELESS_SDK_ROOT ${PROJECT_SOURCE_DIR}/sdk)
+set(NOISELESS_TESTS_ROOT ${PROJECT_SOURCE_DIR}/tests)
+set(NOISELESS_CAPI_ROOT ${PROJECT_SOURCE_DIR}/c_api)
+set(NOISELESS_APPLICATIONS_ROOT ${PROJECT_SOURCE_DIR}/applications)
+set(NOISELESS_3RD_LIBRARIES ${PROJECT_SOURCE_DIR}/3rd)
+
+# Set the cmake path variable
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+# This flag must be activated in order to handle properly folder flags
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Setting the compiler data
-SET(CMAKE_MACRO_DIRS "${PROJECT_SOURCE_DIR}/cmake/")
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
-link_directories(${CMAKE_BINARY_DIR} "/usr/local/lib/")
+# Define the cmake macros
+include(CMakePlatforms)
+include(CMakeMacros)
+include(CMakeBuildSettings)
 
-# Setting the folder data
-set(SOURCES "${PROJECT_SOURCE_DIR}/src/")
-set(TEST "${PROJECT_SOURCE_DIR}/test/")
-set(PROGRAM "${PROJECT_SOURCE_DIR}/program/")
+# Define the build options
+define_plaform_settings()
 
-# Setting the include and external includes and data
-IF(WIN32)
-  set(EXTERNAL_LIBS "${PROJECT_SOURCE_DIR}/external/windows")
-  set(EXTERNAL_INCLUDES "${PROJECT_SOURCE_DIR}/include/windows")
-ENDIF()
+FIND_PACKAGE(OpenCL REQUIRED)
 
-include(${CMAKE_MACRO_DIRS}/Macros.cmake)
+set(THIRD_PARTY_LIBRARIES "${OpenCL_LIBRARIES}")
 
-IF(WIN32)
-  add_definitions( -DWINDOWSPC )
-  FIND_LIBRARY(OpenGL_LIBRARY OpenGL )
-  FIND_PACKAGE(OpenCL REQUIRED)
-  set(GRAPHIC_INCLUDE_DIR "${GRAPHIC_INCLUDE_DIR}" "${OPENGL_INCLUDE_DIRS}" "${OpenCL_INCLUDE_DIRS}")
-  SET(GRAPHIC_LIBS "${GRAPHIC_LIBS}" "${EXTERNAL_LIBS}/lib-vc2015/glfw3.lib" "${EXTERNAL_LIBS}/glew32.lib" "${EXTERNAL_LIBS}/glew32s.lib" "opengl32.lib" "${OpenCL_LIBRARIES}")
-  SET(CORE_LIBS ${GRAPHIC_LIBS} )
-ENDIF()
+# Print the platform's name
+message(STATUS "The build identifier is: ${NOISELESS_PLATFORM_NAME}")
 
-# Generating the libraries
-GENERATE_LIB("${SOURCES}/base" base "noiseless")
-GENERATE_LIB("${SOURCES}/containers" containers "noiseless")
-GENERATE_LIB("${SOURCES}/memory" memory "noiseless")
-GENERATE_LIB("${SOURCES}/math" math "noiseless")
-GENERATE_LIB("${SOURCES}/core" core "noiseless")
-GENERATE_LIB("${SOURCES}/geometry" geometry "noiseless")
-GENERATE_LIB("${SOURCES}/render" render "noiseless")
-GENERATE_LIB("${SOURCES}/tools" tools "noiseless")
+# Create the list of allowed files to be included
+set(bento_source_extensions)
+list(APPEND bento_source_extensions ".h" ".cpp" ".inl" ".txt")
 
-SET(CORE_LIBS ${CORE_LIBS} base containers memory math core geometry render tools)
+# Compile the bento SDK
+add_subdirectory(${BENTO_SDK_ROOT}/src)
+
+# Generate the noiseless SDK
+add_subdirectory(${NOISELESS_SDK_ROOT}/src)
+
+# Generate the c api library
+add_subdirectory(${NOISELESS_CAPI_ROOT}/src)
 
 # Adding the tests if we should
-if(TESTS)
-  add_subdirectory(${TEST})
-endif()
-
-# Adding the programs if we should
-#add_subdirectory(${PROGRAM})
-
-IF(WIN32)
-  file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/kernel" kernels)
-  # file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/program/kernel" programData)
-  file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/test/kernel" testData)
-
-  # execute_process( COMMAND cmd.exe /c mklink /D ${programData} ${kernels})
-  execute_process( COMMAND cmd.exe /c mklink /D ${testData} ${kernels})
-ENDIF(WIN32)
+add_subdirectory(${NOISELESS_TESTS_ROOT})

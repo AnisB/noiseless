@@ -1,3 +1,0 @@
-GENERATE_TEST(test_cl)
-GENERATE_TEST(test_renderer)
-GENERATE_TEST(test_surfacearea)
