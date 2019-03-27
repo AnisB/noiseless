@@ -82,7 +82,7 @@ namespace noiseless
 	    }
 
 	    // Create a command queue
-		new_context->commands = clCreateCommandQueueWithProperties(new_context->context, new_context->device_id, 0, &error_flag);
+		new_context->commands = clCreateCommandQueue(new_context->context, new_context->device_id, 0, &error_flag);
 	    if (!new_context->commands)
 	    {
 	    	clReleaseContext(new_context->context);
