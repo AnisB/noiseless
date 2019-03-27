@@ -37,6 +37,9 @@ namespace noiseless
 		// Keep track of the ComputeContext
 		ComputeContext _computeContext;
 
+		// Keep track of the CommandList
+		ComputeCommandList _commandList;
+
 		// Program to generate the rays
 		ComputeProgram _rayGenerationProgram;
 		ComputeKernel _rayGenerationKernel;

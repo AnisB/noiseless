@@ -7,6 +7,7 @@ namespace noiseless
 {
 	// Opaque types of the Backend API
 	typedef uint64_t ComputeContext;
+	typedef uint64_t ComputeCommandList;
 	typedef uint64_t ComputeProgram;
 	typedef uint64_t ComputeKernel;
 	typedef uint64_t ComputeBuffer;

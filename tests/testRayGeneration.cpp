@@ -8,6 +8,8 @@
 #include <gpu_backend/compute_api.h>
 #include <resources/kernel_source.h>
 
+using namespace noiseless;
+
 int main(int argc, char** argv)
 {
 	// Allocator used for this program
@@ -22,16 +24,16 @@ int main(int argc, char** argv)
 	}
 
 	// Build the compiler options
-	noiseless::TCompilerOptions options(current_alloc);
-	noiseless::asset_compiler::build_from_args(options, arg_array);
+	TCompilerOptions options(current_alloc);
+	asset_compiler::build_from_args(options, arg_array);
 	if (options._source_dir == "") return -1;
 
 	// Compile
 	bento::TAssetDatabase asset_db(*bento::common_allocator());
-	bool result = noiseless::asset_compiler::compile(options, asset_db);
+	bool result = asset_compiler::compile(options, asset_db);
 
 	// Create a fake camera looking forward Z
-	noiseless::TCamera camera;
+	TCamera camera;
 	bento::SetIdentity(camera.view);
 	camera.fov = 45;
 	camera.nearPlane = 0.001f;
@@ -43,45 +45,49 @@ int main(int argc, char** argv)
 	uint32_t numRays = width * height;
 
 	// Build the ray generation settings
-	noiseless::TCameraRaySettings cameraRaySettings;
-	noiseless::build_ray_generation_data(camera, width, height, cameraRaySettings);
+	TCameraRaySettings cameraRaySettings;
+	build_ray_generation_data(camera, width, height, cameraRaySettings);
 
 	// Create a gpu context
-	noiseless::ComputeContext context = noiseless::create_compute_context();
+	ComputeContext context = create_compute_context();
+
+	// Create a command list
+	ComputeCommandList commandList = create_command_list(context);
 
 	// Create an output buffer
-	noiseless::ComputeBuffer output_buffer = noiseless::create_buffer(context, numRays * sizeof(noiseless::TRay), noiseless::ComputeBufferType::WRITE_ONLY);
+	ComputeBuffer output_buffer = create_buffer(context, numRays * sizeof(TRay), ComputeBufferType::WRITE_ONLY);
 
 	// Let's request
-	noiseless::TKernelSource kernelSource(*bento::common_allocator());
+	TKernelSource kernelSource(*bento::common_allocator());
 	const bento::TAsset* asset = asset_db.request_asset("kernels/camera_ray_generation.kl");
 	const char* assetData = asset->data.begin();
 	bento::unpack_type(assetData, kernelSource);
 
 	// Create a program and a kernel
-	noiseless::ComputeProgram program = noiseless::create_program_source(context, kernelSource.data.begin());
-	noiseless::ComputeKernel kernel = noiseless::create_kernel(program, "camera_ray_generation");
+	ComputeProgram program = create_program_source(context, kernelSource.data.begin());
+	ComputeKernel kernel = create_kernel(program, "camera_ray_generation");
 
 	// Sent the arguments
-	noiseless::kernel_argument(kernel, 0, sizeof(noiseless::TCameraRaySettings), (unsigned char*)&cameraRaySettings);
-	noiseless::kernel_argument(kernel, 1, output_buffer);
-	noiseless::kernel_argument(kernel, 2, sizeof(numRays), (unsigned char*)&numRays);
+	kernel_argument(kernel, 0, sizeof(TCameraRaySettings), (unsigned char*)&cameraRaySettings);
+	kernel_argument(kernel, 1, output_buffer);
+	kernel_argument(kernel, 2, sizeof(numRays), (unsigned char*)&numRays);
 
 	// Launch the kernel
-	noiseless::launch_kernel_1D(context, kernel, numRays);
+	dispatch_kernel_1D(commandList, kernel, numRays);
 
 	// Wait for the kernel to finish
-	noiseless::wait_command_queue(context);
+	flush_command_list(commandList);
 
 	// Read the output values
-	bento::Vector<noiseless::TRay> outputRays(*bento::common_allocator(), numRays);
-	noiseless::read_buffer(context, output_buffer, (unsigned char*)&outputRays[0]);
+	bento::Vector<TRay> outputRays(*bento::common_allocator(), numRays);
+	read_buffer(commandList, output_buffer, (unsigned char*)&outputRays[0]);
 
 	// Release all the gpu resources
-	noiseless::destroy_buffer(output_buffer);
-	noiseless::destroy_kernel(kernel);
-	noiseless::destroy_program(program);
-	noiseless::destroy_compute_context(context);
+	destroy_buffer(output_buffer);
+	destroy_kernel(kernel);
+	destroy_program(program);
+	destroy_command_list(commandList);
+	destroy_compute_context(context);
 
 	return 0;
 }

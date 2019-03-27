@@ -11,6 +11,7 @@ namespace noiseless
 	, _width(0)
 	, _height(0)
 	, _computeContext(0)
+	, _commandList(0)
 	, _computeRayBuffer(0)
 	, _computeColorBuffer(0)
 	{
@@ -24,20 +25,23 @@ namespace noiseless
 
 	void TIntegrator::init_resources(const bento::TAssetDatabase& assetDatabase)
 	{
-		// Keep track of the compute context shall be used
+		// Create the compute context shall be used
 		_computeContext = create_compute_context();
 
+		// Create the command list where we shall enqueue our commands
+		_commandList = create_command_list(_computeContext);
+
 		// Request the cameray ray generation program and compile it
-		noiseless::TKernelSource rayGenkernelSource(*bento::common_allocator());
-		assetDatabase.unpack_asset_to_type<noiseless::TKernelSource>("kernels/camera_ray_generation.kl", rayGenkernelSource);
-		_rayGenerationProgram = noiseless::create_program_source(_computeContext, rayGenkernelSource.data.begin());
-		_rayGenerationKernel = noiseless::create_kernel(_rayGenerationProgram, "camera_ray_generation");
+		TKernelSource rayGenkernelSource(*bento::common_allocator());
+		assetDatabase.unpack_asset_to_type<TKernelSource>("kernels/camera_ray_generation.kl", rayGenkernelSource);
+		_rayGenerationProgram = create_program_source(_computeContext, rayGenkernelSource.data.begin());
+		_rayGenerationKernel = create_kernel(_rayGenerationProgram, "camera_ray_generation");
 
 		// Request the integrator program
-		noiseless::TKernelSource integratorKernelSource(*bento::common_allocator());
-		assetDatabase.unpack_asset_to_type<noiseless::TKernelSource>("kernels/integrator.kl", integratorKernelSource);
-		_integratorComputeProgram = noiseless::create_program_source(_computeContext, integratorKernelSource.data.begin());
-		_integratorComputeKernel = noiseless::create_kernel(_integratorComputeProgram, "trace");
+		TKernelSource integratorKernelSource(*bento::common_allocator());
+		assetDatabase.unpack_asset_to_type<TKernelSource>("kernels/integrator.kl", integratorKernelSource);
+		_integratorComputeProgram = create_program_source(_computeContext, integratorKernelSource.data.begin());
+		_integratorComputeKernel = create_kernel(_integratorComputeProgram, "trace");
 	}
 
 	void TIntegrator::setup_scene(const TScene& targetScene)
@@ -52,11 +56,13 @@ namespace noiseless
 
 	void TIntegrator::release_resources()
 	{
-		noiseless::destroy_kernel(_integratorComputeKernel);
-		noiseless::destroy_program(_integratorComputeProgram);
+		destroy_kernel(_integratorComputeKernel);
+		destroy_program(_integratorComputeProgram);
 
-		noiseless::destroy_kernel(_rayGenerationKernel);
-		noiseless::destroy_program(_rayGenerationProgram);
+		destroy_kernel(_rayGenerationKernel);
+		destroy_program(_rayGenerationProgram);
+
+		destroy_command_list(_commandList);
 
 		destroy_compute_context(_computeContext);
 	}
@@ -98,7 +104,7 @@ namespace noiseless
 		kernel_argument(_rayGenerationKernel, 2, sizeof(numRays), (unsigned char*)&numRays);
 
 		// Push the ray generation command
-		launch_kernel_1D(_computeContext, _rayGenerationKernel, numRays);
+		dispatch_kernel_1D(_commandList, _rayGenerationKernel, numRays);
 
 		// Now that the ray generation is done, let's execute the integration evaluation
 		kernel_argument(_integratorComputeKernel, 0, _computeRayBuffer);
@@ -106,10 +112,10 @@ namespace noiseless
 		kernel_argument(_integratorComputeKernel, 2, _computeColorBuffer);
 
 		// Push the ray iintegration evaluation kernel
-		launch_kernel_1D(_computeContext, _integratorComputeKernel, numRays);
+		dispatch_kernel_1D(_commandList, _integratorComputeKernel, numRays);
 
 		// Flush and wait for the command queue
-		wait_command_queue(_computeContext);
+		flush_command_list(_commandList);
 	}
 
 	void TIntegrator::read_color_buffer(bento::Vector<bento::Vector4>& outputBuffer) const
@@ -120,6 +126,6 @@ namespace noiseless
 			outputBuffer.resize(numRays);
 		}
 
-		read_buffer(_computeContext, _computeColorBuffer, (unsigned char*)&outputBuffer[0]);
+		read_buffer(_commandList, _computeColorBuffer, (unsigned char*)&outputBuffer[0]);
 	}
 }

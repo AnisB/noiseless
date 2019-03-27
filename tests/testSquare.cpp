@@ -21,6 +21,8 @@ __kernel void process(__global float* A, __global float* B, const uint num_eleme
 	}\
 }";
 
+using namespace noiseless;
+
 int main()
 {
 	// Allocator used for this program
@@ -30,7 +32,10 @@ int main()
 	const uint32_t num_elements = 10000000;
 
 	// Create a gpu context
-	noiseless::ComputeContext context = noiseless::create_compute_context();
+	ComputeContext context = create_compute_context();
+
+	// Create a command list
+	ComputeCommandList commandList = create_command_list(context);
 
 	// Create init values
 	bento::Vector<float> input_values(*bento::common_allocator(), num_elements);
@@ -39,30 +44,30 @@ int main()
 		input_values[data_idx] = (float)data_idx;
 	}
 	// Create and write init value buffer
-	noiseless::ComputeBuffer input_buffer = noiseless::create_buffer(context, num_elements * sizeof(float), noiseless::ComputeBufferType::READ_ONLY);
-	noiseless::write_buffer(context, input_buffer, (unsigned char*)&input_values[0]);
+	ComputeBuffer input_buffer = create_buffer(context, num_elements * sizeof(float), ComputeBufferType::READ_ONLY);
+	write_buffer(commandList, input_buffer, (unsigned char*)&input_values[0]);
 
 	// Create an output buffer
-	noiseless::ComputeBuffer output_buffer = noiseless::create_buffer(context, num_elements * sizeof(float), noiseless::ComputeBufferType::WRITE_ONLY);
+	ComputeBuffer output_buffer = create_buffer(context, num_elements * sizeof(float), ComputeBufferType::WRITE_ONLY);
 
 	// Create a program and a kernel
-	noiseless::ComputeProgram program = noiseless::create_program_source(context, squareKernel);
-	noiseless::ComputeKernel kernel = noiseless::create_kernel(program, "process");
+	ComputeProgram program = create_program_source(context, squareKernel);
+	ComputeKernel kernel = create_kernel(program, "process");
 
 	// Sent the arguments
-	noiseless::kernel_argument(kernel, 0, input_buffer);
-	noiseless::kernel_argument(kernel, 1, output_buffer);
-	noiseless::kernel_argument(kernel, 2, sizeof(unsigned int), (unsigned char*)&num_elements);
+	kernel_argument(kernel, 0, input_buffer);
+	kernel_argument(kernel, 1, output_buffer);
+	kernel_argument(kernel, 2, sizeof(unsigned int), (unsigned char*)&num_elements);
 
 	// Launch the kernel
-	noiseless::launch_kernel_1D(context, kernel, num_elements);
+	dispatch_kernel_1D(commandList, kernel, num_elements);
 
 	// Wait for the kernel to finish
-	noiseless::wait_command_queue(context);
+	flush_command_list(commandList);
 
 	// Read the output values
 	bento::Vector<float> output_values(*bento::common_allocator(), num_elements);
-	noiseless::read_buffer(context, output_buffer, (unsigned char*)&output_values[0]);
+	read_buffer(commandList, output_buffer, (unsigned char*)&output_values[0]);
 
 	// Check the results
 	for (uint32_t element_idx = 0; element_idx < num_elements; ++element_idx)
@@ -71,10 +76,11 @@ int main()
 	}
 
 	// Release all the gpu resources
-	noiseless::destroy_buffer(output_buffer);
-	noiseless::destroy_buffer(input_buffer);
-	noiseless::destroy_kernel(kernel);
-	noiseless::destroy_program(program);
-	noiseless::destroy_compute_context(context);
+	destroy_buffer(output_buffer);
+	destroy_buffer(input_buffer);
+	destroy_kernel(kernel);
+	destroy_program(program);
+	destroy_command_list(commandList);
+	destroy_compute_context(context);
 	return 0;
 }

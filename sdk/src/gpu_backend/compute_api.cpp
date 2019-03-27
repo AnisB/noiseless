@@ -14,7 +14,13 @@ namespace noiseless
 	{
 		cl_device_id device_id;
 		cl_context context;
-		cl_command_queue commands;
+		cl_int error_flag;
+		size_t global_dim;
+	};
+
+	struct OpenCLCommandList
+	{
+		cl_command_queue commandList;
 		size_t global_dim;
 	};
 
@@ -51,7 +57,7 @@ namespace noiseless
 		OpenCLContext* new_context = new OpenCLContext();
 
 		// Declare the error holder
-		cl_int error_flag;
+		new_context->error_flag = 0;
 
 		// Get the number of platforms
 		cl_uint platformIdCount = 0;
@@ -64,8 +70,8 @@ namespace noiseless
 		uint64_t best_platform = evaluate_platforms(platformIds);
 
 		// Fetch the id of the first available device
-		error_flag = clGetDeviceIDs(platformIds[best_platform], CL_DEVICE_TYPE_ALL, 1, &new_context->device_id, NULL);
-	    if (error_flag != CL_SUCCESS)
+		new_context->error_flag = clGetDeviceIDs(platformIds[best_platform], CL_DEVICE_TYPE_ALL, 1, &new_context->device_id, NULL);
+	    if (new_context->error_flag != CL_SUCCESS)
 	    {
 	        delete new_context;
 			assert_fail_msg("Can't fetch devices");
@@ -73,21 +79,11 @@ namespace noiseless
 	    }
 
 	    // Create an opencl context
-		new_context->context = clCreateContext(0, 1, &new_context->device_id, NULL, NULL, &error_flag);
+		new_context->context = clCreateContext(0, 1, &new_context->device_id, NULL, NULL, &new_context->error_flag);
 	  	if (!new_context->context)
 	    {
        		delete new_context;
 			assert_fail_msg("Can't create context");
-	        return 0;
-	    }
-
-	    // Create a command queue
-		new_context->commands = clCreateCommandQueue(new_context->context, new_context->device_id, 0, &error_flag);
-	    if (!new_context->commands)
-	    {
-	    	clReleaseContext(new_context->context);
-       		delete new_context;
-			assert_fail_msg("Can't create command queue");
 	        return 0;
 	    }
 
@@ -101,9 +97,29 @@ namespace noiseless
 	void destroy_compute_context(ComputeContext context)
 	{
 		OpenCLContext* target_context = (OpenCLContext*) context;
-		clReleaseCommandQueue(target_context->commands);
 		clReleaseContext(target_context->context);
        	delete target_context;
+	}
+
+	ComputeCommandList create_command_list(ComputeContext context)
+	{
+		OpenCLCommandList* newCommandList = new OpenCLCommandList();
+		OpenCLContext* target_context = (OpenCLContext*)context;
+		newCommandList->global_dim = target_context->global_dim;
+		newCommandList->commandList = clCreateCommandQueue(target_context->context, target_context->device_id, 0, &target_context->error_flag);
+		if (!newCommandList->commandList)
+		{
+			assert_fail_msg("Can't create command list");
+			return 0;
+		}
+		return (ComputeCommandList)newCommandList;
+	}
+
+	void destroy_command_list(ComputeCommandList computeCommandList)
+	{
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)computeCommandList;
+		clReleaseCommandQueue(currentCommandList->commandList);
+		delete currentCommandList;
 	}
 
 	ComputeProgram create_program_source(ComputeContext context, const char* programSource)
@@ -150,12 +166,12 @@ namespace noiseless
 		return (ComputeKernel)kernel;
 	}
 
-	bool launch_kernel_1D(ComputeContext context, ComputeKernel kernel, size_t job_size)
+	bool dispatch_kernel_1D(ComputeCommandList commandList, ComputeKernel kernel, size_t job_size)
 	{
-		OpenCLContext* target_context = (OpenCLContext*)context;
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)commandList;
 
-		size_t maxDimension = std::min(job_size, target_context->global_dim);
-		cl_int error_flag = clEnqueueNDRangeKernel(target_context->commands, (cl_kernel)kernel, 1, nullptr, &maxDimension, nullptr, 0, NULL, NULL);
+		size_t maxDimension = std::min(job_size, currentCommandList->global_dim);
+		cl_int error_flag = clEnqueueNDRangeKernel(currentCommandList->commandList, (cl_kernel)kernel, 1, nullptr, &maxDimension, nullptr, 0, NULL, NULL);
 		if (error_flag != CL_SUCCESS)
 		{
 			assert_fail_msg("Can't execute kernel");
@@ -164,14 +180,14 @@ namespace noiseless
 		return true;
 	}
 
-	bool launch_kernel_2D(ComputeContext context, ComputeKernel kernel, uint64_t job_size_0, uint64_t job_size_1)
+	bool dispatch_kernel_2D(ComputeCommandList commandList, ComputeKernel kernel, uint64_t job_size_0, uint64_t job_size_1)
 	{
-		OpenCLContext* target_context = (OpenCLContext*)context;
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)commandList;
 
-		size_t global_dim_0 = std::min(job_size_0, target_context->global_dim);
-		size_t global_dim_1 = std::min(job_size_1, target_context->global_dim);
+		size_t global_dim_0 = std::min(job_size_0, currentCommandList->global_dim);
+		size_t global_dim_1 = std::min(job_size_1, currentCommandList->global_dim);
 		size_t global_dim[2] = { global_dim_0, global_dim_1 };
-		cl_int error_flag = clEnqueueNDRangeKernel(target_context->commands, (cl_kernel)kernel, 2, nullptr, global_dim, nullptr, 0, NULL, NULL);
+		cl_int error_flag = clEnqueueNDRangeKernel(currentCommandList->commandList, (cl_kernel)kernel, 2, nullptr, global_dim, nullptr, 0, NULL, NULL);
 		if (error_flag != CL_SUCCESS)
 		{
 			assert_fail_msg("Can't execute kernel");
@@ -180,10 +196,10 @@ namespace noiseless
 		return true;
 	}
 
-	void wait_command_queue(ComputeContext context)
+	void flush_command_list(ComputeCommandList commandList)
 	{
-		OpenCLContext* target_context = (OpenCLContext*)context;
-		clFinish(target_context->commands);
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)commandList;
+		clFinish(currentCommandList->commandList);
 	}
 
 	void destroy_kernel(ComputeKernel kernel)
@@ -209,11 +225,11 @@ namespace noiseless
 		return (ComputeBuffer)buffer;
 	}
 
-	bool read_buffer(ComputeContext context, ComputeBuffer buffer, unsigned char* output_data)
+	bool read_buffer(ComputeCommandList commandList, ComputeBuffer buffer, unsigned char* output_data)
 	{
-		OpenCLContext* target_context = (OpenCLContext*)context;
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)commandList;
 		OpenCLBuffer* target_buffer = (OpenCLBuffer*)buffer;
-		cl_int error_flag = clEnqueueReadBuffer(target_context->commands, target_buffer->buffer, CL_TRUE, 0, target_buffer->size, output_data, 0, NULL, NULL);
+		cl_int error_flag = clEnqueueReadBuffer(currentCommandList->commandList, target_buffer->buffer, CL_TRUE, 0, target_buffer->size, output_data, 0, NULL, NULL);
 		if (error_flag != CL_SUCCESS)
 		{
 			assert_fail_msg("Can't read buffer");
@@ -222,11 +238,11 @@ namespace noiseless
 		return true;
 	}
 
-	bool write_buffer(ComputeContext context, ComputeBuffer buffer, unsigned char* intput_data)
+	bool write_buffer(ComputeCommandList commandList, ComputeBuffer buffer, unsigned char* intput_data)
 	{
-		OpenCLContext* target_context = (OpenCLContext*)context;
+		OpenCLCommandList* currentCommandList = (OpenCLCommandList*)commandList;
 		OpenCLBuffer* target_buffer = (OpenCLBuffer*)buffer;
-		cl_int error_flag = clEnqueueWriteBuffer(target_context->commands, target_buffer->buffer, CL_TRUE, 0, target_buffer->size, intput_data, 0, NULL, NULL);
+		cl_int error_flag = clEnqueueWriteBuffer(currentCommandList->commandList, target_buffer->buffer, CL_TRUE, 0, target_buffer->size, intput_data, 0, NULL, NULL);
 		if (error_flag != CL_SUCCESS)
 		{
 			assert_fail_msg("Can't write buffer");

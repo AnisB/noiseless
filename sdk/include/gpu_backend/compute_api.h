@@ -8,23 +8,36 @@
 
 namespace noiseless
 {
+	// Context creation and destruction
 	ComputeContext create_compute_context();
 	void destroy_compute_context(ComputeContext context);
 
+	// Program create and destruction
 	ComputeProgram create_program_source(ComputeContext context, const char* programSource);
 	void destroy_program(ComputeProgram program);
 
+	// Command list creation and destruction
+	ComputeCommandList create_command_list(ComputeContext context);
+	void destroy_command_list(ComputeCommandList computeCommandList);
+
+	// Kernel creation and destruction
 	ComputeKernel create_kernel(ComputeProgram program, const char* kernel_name);
-	bool launch_kernel_1D(ComputeContext context, ComputeKernel kernel, uint64_t job_size);
-	bool launch_kernel_2D(ComputeContext context, ComputeKernel kernel, uint64_t job_size_0, uint64_t job_size_1);
-	void wait_command_queue(ComputeContext context);
 	void destroy_kernel(ComputeKernel kernel);
 
+	// Buffer creation
 	ComputeBuffer create_buffer(ComputeContext context, uint64_t buffer_size, ComputeBufferType::Type buffer_type);
-	bool read_buffer(ComputeContext context, ComputeBuffer buffer, unsigned char* output_data);
-	bool write_buffer(ComputeContext context, ComputeBuffer buffer, unsigned char* intput_data);
 	void destroy_buffer(ComputeBuffer buffer);
 
+	// Command enquing
+	bool dispatch_kernel_1D(ComputeCommandList commandList, ComputeKernel kernel, uint64_t job_size);
+	bool dipsatch_kernel_2D(ComputeCommandList commandList, ComputeKernel kernel, uint64_t job_size_0, uint64_t job_size_1);
+	bool read_buffer(ComputeCommandList commandList, ComputeBuffer buffer, unsigned char* output_data);
+	bool write_buffer(ComputeCommandList commandList, ComputeBuffer buffer, unsigned char* intput_data);
+
+	// Flushing the command list
+	void flush_command_list(ComputeCommandList commandList);
+
+	// Setting parameters to kernels
 	bool kernel_argument(ComputeBuffer kernel, int idx, ComputeBuffer buffer);
 	bool kernel_argument(ComputeBuffer kernel, int idx, uint32_t size, unsigned char* raw_data);
 }
