@@ -17,4 +17,4 @@ foreach(source_dir ${sub_projects_sources})
 endforeach()
 
 # Generate the static library
-bento_static_lib("noiseless_sdk" "sdk" "${header_files};${source_files};" "${NOISELESS_SDK_INCLUDE};${NOISELESS_3RD_LIBRARIES};${BENTO_SDK_ROOT}/include;${OpenCL_INCLUDE_DIRS}")
+bento_static_lib("noiseless_sdk" "sdk" "${header_files};${source_files};" "${NOISELESS_SDK_INCLUDE};${NOISELESS_3RD_LIBRARIES};${BENTO_SDK_ROOT}/include;${OpenCL_INCLUDE_DIRS};")

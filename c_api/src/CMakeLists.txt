@@ -10,4 +10,4 @@ bento_sources(source_files "${NOISELESS_CAPI_SRC}" "c_api")
 
 # Generate the static library
 bento_dynamic_lib("noiseless_dylib" "c_api" "${header_files};${source_files};" "${NOISELESS_SDK_INCLUDE};${NOISELESS_3RD_LIBRARIES};${NOISELESS_CAPI_INCLUDE}")
-target_link_libraries("noiseless_dylib" "noiseless_sdk" "bento_sdk" "${THIRD_PARTY_LIBRARIES}")
+target_link_libraries("noiseless_dylib" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")

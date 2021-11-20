@@ -2,11 +2,11 @@
 
 // Internal include
 #include "integrators/compute_scene.h"
-#include "gpu_backend/compute_api.h"
 #include "model/camera.h"
 
 // Bento includes
 #include <bento_resources/asset_database.h>
+#include <bento_compute/compute_api.h>
 
 namespace noiseless
 {
@@ -35,18 +35,18 @@ namespace noiseless
 
 	private:
 		// Keep track of the ComputeContext
-		ComputeContext _computeContext;
+		bento::ComputeContext _computeContext;
 
 		// Keep track of the CommandList
-		ComputeCommandList _commandList;
+		bento::ComputeCommandList _commandList;
 
 		// Program to generate the rays
-		ComputeProgram _rayGenerationProgram;
-		ComputeKernel _rayGenerationKernel;
+		bento::ComputeProgram _rayGenerationProgram;
+		bento::ComputeKernel _rayGenerationKernel;
 
 		// Program to evaluate the integration
-		ComputeProgram	_integratorComputeProgram;
-		ComputeKernel	_integratorComputeKernel;
+		bento::ComputeProgram	_integratorComputeProgram;
+		bento::ComputeKernel	_integratorComputeKernel;
 
 		// The target scene for the integration
 		TComputeScene	_computeScene;
@@ -54,8 +54,8 @@ namespace noiseless
 		// The render target for the integrator
 		uint32_t _width;
 		uint32_t _height;
-		ComputeBuffer _computeRayBuffer;
-		ComputeBuffer _computeColorBuffer;
+		bento::ComputeBuffer _computeRayBuffer;
+		bento::ComputeBuffer _computeColorBuffer;
 
 	public:
 		bento::IAllocator& allocator;

@@ -1,8 +1,8 @@
-bento_exe("testSquare" "tests" "testSquare.cpp" "${NOISELESS_SDK_INCLUDE};${THIRD_PARTY_INCLUDE_DIRS}")
-target_link_libraries("testSquare" "noiseless_sdk" "bento_sdk" "${THIRD_PARTY_LIBRARIES}")
+bento_exe("testSquare" "tests" "testSquare.cpp" "${NOISELESS_SDK_INCLUDE};${BENTO_SDK_INCLUDE}")
+target_link_libraries("testSquare" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")
 
-bento_exe("testCompiler" "tests" "testCompiler.cpp" "${NOISELESS_SDK_INCLUDE};${THIRD_PARTY_INCLUDE_DIRS}")
-target_link_libraries("testCompiler" "noiseless_sdk" "bento_sdk" "${THIRD_PARTY_LIBRARIES}")
+bento_exe("testCompiler" "tests" "testCompiler.cpp" "${NOISELESS_SDK_INCLUDE};${BENTO_SDK_INCLUDE}")
+target_link_libraries("testCompiler" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")
 
-bento_exe("testRayGeneration" "tests" "testRayGeneration.cpp" "${NOISELESS_SDK_INCLUDE};${THIRD_PARTY_INCLUDE_DIRS}")
-target_link_libraries("testRayGeneration" "noiseless_sdk" "bento_sdk" "${THIRD_PARTY_LIBRARIES}")
+bento_exe("testRayGeneration" "tests" "testRayGeneration.cpp" "${NOISELESS_SDK_INCLUDE};${BENTO_SDK_INCLUDE}")
+target_link_libraries("testRayGeneration" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")

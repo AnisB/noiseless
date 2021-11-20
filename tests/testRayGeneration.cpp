@@ -1,11 +1,11 @@
 // Bento includes
 #include <bento_math/matrix4.h>
+#include <bento_compute/compute_api.h>
 
 // Internal includes
 #include <model/camera.h>
 #include <asset_compiler/compiler.h>
 #include <integrators/camera_ray_generation.h>
-#include <gpu_backend/compute_api.h>
 #include <resources/kernel_source.h>
 
 using namespace noiseless;
@@ -48,14 +48,14 @@ int main(int argc, char** argv)
 	TCameraRaySettings cameraRaySettings;
 	build_ray_generation_data(camera, width, height, cameraRaySettings);
 
-	// Create a gpu context
-	ComputeContext context = create_compute_context();
+	// Create a compute context
+	bento::ComputeContext context = bento::create_compute_context(current_alloc);
 
 	// Create a command list
-	ComputeCommandList commandList = create_command_list(context);
+	bento::ComputeCommandList commandList = bento::create_command_list(context, current_alloc);
 
 	// Create an output buffer
-	ComputeBuffer output_buffer = create_buffer(context, numRays * sizeof(TRay), ComputeBufferType::WRITE_ONLY);
+	bento::ComputeBuffer output_buffer = bento::create_buffer(context, numRays * sizeof(TRay), bento::ComputeBufferType::WRITE_ONLY, current_alloc);
 
 	// Let's request
 	TKernelSource kernelSource(*bento::common_allocator());
@@ -64,30 +64,30 @@ int main(int argc, char** argv)
 	bento::unpack_type(assetData, kernelSource);
 
 	// Create a program and a kernel
-	ComputeProgram program = create_program_source(context, kernelSource.data.begin());
-	ComputeKernel kernel = create_kernel(program, "camera_ray_generation");
+	bento::ComputeProgram program = bento::create_program_source(context, kernelSource.data.begin());
+	bento::ComputeKernel kernel = bento::create_kernel(program, "camera_ray_generation");
 
 	// Sent the arguments
-	kernel_argument(kernel, 0, sizeof(TCameraRaySettings), (unsigned char*)&cameraRaySettings);
-	kernel_argument(kernel, 1, output_buffer);
-	kernel_argument(kernel, 2, sizeof(numRays), (unsigned char*)&numRays);
+	bento::kernel_argument(kernel, 0, sizeof(TCameraRaySettings), (unsigned char*)&cameraRaySettings);
+	bento::kernel_argument(kernel, 1, output_buffer);
+	bento::kernel_argument(kernel, 2, sizeof(numRays), (unsigned char*)&numRays);
 
 	// Launch the kernel
-	dispatch_kernel_1D(commandList, kernel, numRays);
+	bento::dispatch_kernel_1D(commandList, kernel, numRays);
 
 	// Wait for the kernel to finish
-	flush_command_list(commandList);
+	bento::flush_command_list(commandList);
 
 	// Read the output values
 	bento::Vector<TRay> outputRays(*bento::common_allocator(), numRays);
-	read_buffer(commandList, output_buffer, (unsigned char*)&outputRays[0]);
+	bento::read_buffer(commandList, output_buffer, (unsigned char*)&outputRays[0]);
 
 	// Release all the gpu resources
-	destroy_buffer(output_buffer);
-	destroy_kernel(kernel);
-	destroy_program(program);
-	destroy_command_list(commandList);
-	destroy_compute_context(context);
+	bento::destroy_buffer(output_buffer);
+	bento::destroy_kernel(kernel);
+	bento::destroy_program(program);
+	bento::destroy_command_list(commandList);
+	bento::destroy_compute_context(context);
 
 	return 0;
 }

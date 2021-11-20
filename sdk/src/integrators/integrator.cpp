@@ -1,13 +1,12 @@
 // Internal includes
 #include "integrators/integrator.h"
 #include "resources/kernel_source.h"
-#include "gpu_backend/compute_api.h"
 #include "integrators/camera_ray_generation.h"
 
 namespace noiseless
 {
-	TIntegrator::TIntegrator(bento::IAllocator& allocator)
-	: allocator(allocator)
+	TIntegrator::TIntegrator(bento::IAllocator& p_allocator)
+	: allocator(p_allocator)
 	, _width(0)
 	, _height(0)
 	, _computeContext(0)
@@ -26,27 +25,27 @@ namespace noiseless
 	void TIntegrator::init_resources(const bento::TAssetDatabase& assetDatabase)
 	{
 		// Create the compute context shall be used
-		_computeContext = create_compute_context();
+		_computeContext = bento::create_compute_context(allocator);
 
 		// Create the command list where we shall enqueue our commands
-		_commandList = create_command_list(_computeContext);
+		_commandList = bento::create_command_list(_computeContext, allocator);
 
-		// Request the cameray ray generation program and compile it
+		// Request the camera ray generation program and compile it
 		TKernelSource rayGenkernelSource(*bento::common_allocator());
 		assetDatabase.unpack_asset_to_type<TKernelSource>("kernels/camera_ray_generation.kl", rayGenkernelSource);
-		_rayGenerationProgram = create_program_source(_computeContext, rayGenkernelSource.data.begin());
-		_rayGenerationKernel = create_kernel(_rayGenerationProgram, "camera_ray_generation");
+		_rayGenerationProgram = bento::create_program_source(_computeContext, rayGenkernelSource.data.begin());
+		_rayGenerationKernel = bento::create_kernel(_rayGenerationProgram, "camera_ray_generation");
 
 		// Request the integrator program
 		TKernelSource integratorKernelSource(*bento::common_allocator());
 		assetDatabase.unpack_asset_to_type<TKernelSource>("kernels/integrator.kl", integratorKernelSource);
-		_integratorComputeProgram = create_program_source(_computeContext, integratorKernelSource.data.begin());
-		_integratorComputeKernel = create_kernel(_integratorComputeProgram, "trace");
+		_integratorComputeProgram = bento::create_program_source(_computeContext, integratorKernelSource.data.begin());
+		_integratorComputeKernel = bento::create_kernel(_integratorComputeProgram, "trace");
 	}
 
 	void TIntegrator::setup_scene(const TScene& targetScene)
 	{
-		create_compute_scene(_computeContext, targetScene, _computeScene);
+		create_compute_scene(_computeContext, targetScene, _computeScene, allocator);
 	}
 
 	void TIntegrator::clear_scene()
@@ -56,15 +55,15 @@ namespace noiseless
 
 	void TIntegrator::release_resources()
 	{
-		destroy_kernel(_integratorComputeKernel);
-		destroy_program(_integratorComputeProgram);
+		bento::destroy_kernel(_integratorComputeKernel);
+		bento::destroy_program(_integratorComputeProgram);
 
-		destroy_kernel(_rayGenerationKernel);
-		destroy_program(_rayGenerationProgram);
+		bento::destroy_kernel(_rayGenerationKernel);
+		bento::destroy_program(_rayGenerationProgram);
 
-		destroy_command_list(_commandList);
+		bento::destroy_command_list(_commandList);
 
-		destroy_compute_context(_computeContext);
+		bento::destroy_compute_context(_computeContext);
 	}
 
 	void TIntegrator::set_resolution(uint32_t width, uint32_t height)
@@ -77,18 +76,18 @@ namespace noiseless
 		// Clean and allocate the ray and color buffers
 		if (_computeRayBuffer != 0)
 		{
-			destroy_buffer(_computeRayBuffer);
+			bento::destroy_buffer(_computeRayBuffer);
 			_computeRayBuffer = 0;
 		}
-		create_buffer(_computeContext, numRays * sizeof(TRay), ComputeBufferType::READ_WRITE);
+		bento::create_buffer(_computeContext, numRays * sizeof(TRay), bento::ComputeBufferType::READ_WRITE, allocator);
 
 		if (_computeColorBuffer != 0)
 		{
-			destroy_buffer(_computeColorBuffer);
+			bento::destroy_buffer(_computeColorBuffer);
 			_computeColorBuffer = 0;
 		}
-		create_buffer(_computeColorBuffer, numRays * sizeof(bento::Vector4), ComputeBufferType::READ_WRITE);
-		create_buffer(_computeContext, numRays * sizeof(TRay), ComputeBufferType::WRITE_ONLY);
+		bento::create_buffer(_computeColorBuffer, numRays * sizeof(bento::Vector4), bento::ComputeBufferType::READ_WRITE, allocator);
+		bento::create_buffer(_computeContext, numRays * sizeof(TRay), bento::ComputeBufferType::WRITE_ONLY, allocator);
 	}
 
 	void TIntegrator::render(const TCamera& targetCamera)
@@ -99,23 +98,23 @@ namespace noiseless
 
 		// Set the kernel's parameters
 		uint32_t numRays = _width * _height;
-		kernel_argument(_rayGenerationKernel, 0, sizeof(TCameraRaySettings), (unsigned char*)&cameraRaySettings);
-		kernel_argument(_rayGenerationKernel, 1, _computeRayBuffer);
-		kernel_argument(_rayGenerationKernel, 2, sizeof(numRays), (unsigned char*)&numRays);
+		bento::kernel_argument(_rayGenerationKernel, 0, sizeof(TCameraRaySettings), (unsigned char*)&cameraRaySettings);
+		bento::kernel_argument(_rayGenerationKernel, 1, _computeRayBuffer);
+		bento::kernel_argument(_rayGenerationKernel, 2, sizeof(numRays), (unsigned char*)&numRays);
 
 		// Push the ray generation command
-		dispatch_kernel_1D(_commandList, _rayGenerationKernel, numRays);
+		bento::dispatch_kernel_1D(_commandList, _rayGenerationKernel, numRays);
 
 		// Now that the ray generation is done, let's execute the integration evaluation
-		kernel_argument(_integratorComputeKernel, 0, _computeRayBuffer);
-		kernel_argument(_integratorComputeKernel, 1, sizeof(numRays), (unsigned char*)&numRays);
-		kernel_argument(_integratorComputeKernel, 2, _computeColorBuffer);
+		bento::kernel_argument(_integratorComputeKernel, 0, _computeRayBuffer);
+		bento::kernel_argument(_integratorComputeKernel, 1, sizeof(numRays), (unsigned char*)&numRays);
+		bento::kernel_argument(_integratorComputeKernel, 2, _computeColorBuffer);
 
-		// Push the ray iintegration evaluation kernel
-		dispatch_kernel_1D(_commandList, _integratorComputeKernel, numRays);
+		// Push the ray integration evaluation kernel
+		bento::dispatch_kernel_1D(_commandList, _integratorComputeKernel, numRays);
 
 		// Flush and wait for the command queue
-		flush_command_list(_commandList);
+		bento::flush_command_list(_commandList);
 	}
 
 	void TIntegrator::read_color_buffer(bento::Vector<bento::Vector4>& outputBuffer) const
@@ -126,6 +125,6 @@ namespace noiseless
 			outputBuffer.resize(numRays);
 		}
 
-		read_buffer(_commandList, _computeColorBuffer, (unsigned char*)&outputBuffer[0]);
+		bento::read_buffer(_commandList, _computeColorBuffer, (unsigned char*)&outputBuffer[0]);
 	}
 }

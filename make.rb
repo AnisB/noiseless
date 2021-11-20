@@ -65,16 +65,20 @@ def get_generator_name()
 		generator += "\"Visual Studio 15 2017"
 	elsif $options[:compiler] == "vc14"
 		generator += "\"Visual Studio 14 2015"
+	elsif $options[:compiler] == "vc16"
+		generator += "\"Visual Studio 16 2019\" "
+	elsif $options[:compiler] == "makefile"
+		generator += "\"Unix Makefiles\""
 	else
 		puts "\nERROR: Compiler '#{$options[:compiler]}' not recognized."
 		exit 1
 	end
-	
-	if $options[:platform] == "win64"
-		generator += " Win64\" "
-	else
-		puts "\nERROR: Architecture not recognized '#{$options[:platform]}' not recognized."
-		exit 1
+
+	# Only append arch if not vc16
+	if not $options[:compiler] =="vc16"
+		if $options[:platform] == "win64"
+			generator += " Win64\" "
+		end
 	end
 
 	return generator
@@ -82,23 +86,12 @@ end
 
 # String that defines the platform name that we will be compiling for (unique according to the target compiler/linktype/platform)
 def get_platform_name()
-	return " -DPLATFORM_NAME=" + $platform_name
+	return " -DPROJECT_PLATFORM_NAME=" + $platform_name
 end
 
 # String that defines output directory
 def get_output_directory()
-	return " -DBENTO_OUTPUT_DIRECTORY=" + $output_directory
-end
-
-# Function that evaluates if applications shoud be generated
-def get_applications_flag()
-	applications = ""
-	if $options[:applications] == true
-		applications = " -DAPPLICATIONS=TRUE"
-	else
-		applications = " -DAPPLICATIONS=FALSE"
-	end
-	return applications
+	return " -DPROJECT_OUTPUT_DIRECTORY=" + $output_directory
 end
 
 # For a given setup, generates projects and compiles the library
@@ -112,8 +105,6 @@ def generate_project()
 		command = CMAKE_EXE + " .."
 		# Get the generator name
 		command += get_generator_name()
-		# Shall the applications be generated ?
-		command += get_applications_flag()
 		# Inject the platfomr name
 		command += get_platform_name()
 		# Inject the output directory
@@ -149,7 +140,7 @@ parse_options(ARGV, $options)
 
 # Setting the default OptionParser
 if $options[:compiler] == nil
-	$options[:compiler] = "vc15"
+	$options[:compiler] = "vc16"
 end
 
 if $options[:platform] == nil

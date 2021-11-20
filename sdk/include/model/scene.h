@@ -2,7 +2,6 @@
 
 // Internal includes
 #include "mesh.h"
-#include "gpu_backend/compute_api.h"
 
 namespace noiseless
 {
@@ -20,7 +19,7 @@ namespace noiseless
 		const TMesh& mesh(uint32_t meshIndex) const { return _meshes[meshIndex]; }
 
 	private:
-		// The list of meshes in the scen
+		// The list of meshes in the scene
 		bento::Vector<TMesh> _meshes;
 
 	public:

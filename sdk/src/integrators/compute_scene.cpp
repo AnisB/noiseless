@@ -1,22 +1,21 @@
 // Internal include
 #include "integrators/compute_scene.h"
-#include "gpu_backend/compute_api.h"
 
 namespace noiseless
 {
-	void create_compute_scene(ComputeContext computeContext, const TScene& scene, TComputeScene& outputComputeScene)
+	void create_compute_scene(bento::ComputeContext computeContext, const TScene& scene, TComputeScene& outputComputeScene, bento::IAllocator& allocator)
 	{
 		// Destroy the vertex buffer if not null
 		if(outputComputeScene.vertices != 0)
 		{
-			destroy_buffer(outputComputeScene.vertices);
+			bento::destroy_buffer(outputComputeScene.vertices);
 			outputComputeScene.vertices = 0;
 		}
 
 		// Destroy the index buffer if not null
 		if(outputComputeScene.indices != 0)
 		{
-			destroy_buffer(outputComputeScene.indices);
+			bento::destroy_buffer(outputComputeScene.indices);
 			outputComputeScene.indices = 0;
 		}
 
@@ -65,10 +64,10 @@ namespace noiseless
 		}
 
 		// Let's now create the compute buffers
-		outputComputeScene.vertices = create_buffer(computeContext, totalVerticeCount * sizeof(bento::Vector3), ComputeBufferType::READ_ONLY);
-		write_buffer(computeContext, outputComputeScene.vertices, (unsigned char*)(combinedVerticeArray.begin()));
-		outputComputeScene.indices = create_buffer(computeContext, totalIndexCount * sizeof(bento::IVector3), ComputeBufferType::READ_ONLY);
-		write_buffer(computeContext, outputComputeScene.indices, (unsigned char*)(combinedIndicesArray.begin()));
+		outputComputeScene.vertices = bento::create_buffer(computeContext, totalVerticeCount * sizeof(bento::Vector3), bento::ComputeBufferType::READ_ONLY, allocator);
+		bento::write_buffer(computeContext, outputComputeScene.vertices, (unsigned char*)(combinedVerticeArray.begin()));
+		outputComputeScene.indices = bento::create_buffer(computeContext, totalIndexCount * sizeof(bento::IVector3), bento::ComputeBufferType::READ_ONLY, allocator);
+		bento::write_buffer(computeContext, outputComputeScene.indices, (unsigned char*)(combinedIndicesArray.begin()));
 	}
 
 	void destroy_compute_scene(TComputeScene& targetComputeScene)
@@ -76,14 +75,14 @@ namespace noiseless
 		// Destroy the vertex buffer if not null
 		if (targetComputeScene.vertices != 0)
 		{
-			destroy_buffer(targetComputeScene.vertices);
+			bento::destroy_buffer(targetComputeScene.vertices);
 			targetComputeScene.vertices = 0;
 		}
 
 		// Destroy the index buffer if not null
 		if (targetComputeScene.indices != 0)
 		{
-			destroy_buffer(targetComputeScene.indices);
+			bento::destroy_buffer(targetComputeScene.indices);
 			targetComputeScene.indices = 0;
 		}
 	}

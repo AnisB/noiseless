@@ -25,8 +25,6 @@ define_plaform_settings()
 
 FIND_PACKAGE(OpenCL REQUIRED)
 
-set(THIRD_PARTY_LIBRARIES "${OpenCL_LIBRARIES}")
-
 # Print the platform's name
 message(STATUS "The build identifier is: ${NOISELESS_PLATFORM_NAME}")
 
