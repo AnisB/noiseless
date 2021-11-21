@@ -4,7 +4,7 @@
 namespace noiseless
 {
 	TScene::TScene(bento::IAllocator& allocator)
-	: _meshes(allocator)
+	: _geometries(allocator)
 	, allocator(allocator)
 	{
 
@@ -12,6 +12,6 @@ namespace noiseless
 
 	void TScene::set_num_meshes(uint32_t numMeshes)
 	{
-		_meshes.resize(numMeshes);
+		_geometries.resize(numMeshes);
 	}
 }

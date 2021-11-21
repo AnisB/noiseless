@@ -1,4 +1,5 @@
 // Bento includes
+#include <bento_base/log.h>
 #include <bento_math/matrix4.h>
 #include <bento_compute/compute_api.h>
 
@@ -7,6 +8,10 @@
 #include <asset_compiler/compiler.h>
 #include <integrators/camera_ray_generation.h>
 #include <resources/kernel_source.h>
+
+// External includes
+#include <string>
+#include <algorithm>
 
 using namespace noiseless;
 
@@ -38,8 +43,8 @@ int main(int argc, char** argv)
 	camera.fov = 45;
 	camera.nearPlane = 0.001f;
 	camera.farPlane = 10000.0f;
-	uint32_t width = 1280;
-	uint32_t height = 720;
+	uint32_t width = 2;
+	uint32_t height = 2;
 
 	// The number of rays to generate
 	uint32_t numRays = width * height;
@@ -50,6 +55,12 @@ int main(int argc, char** argv)
 
 	// Create a compute context
 	bento::ComputeContext context = bento::create_compute_context(current_alloc);
+	uint32_t numTiles = bento::dispatch_num_tiles(context);
+	bento::IVector3 tilesSize = bento::dispatch_tiles_size(context);
+	bento::default_logger()->log(bento::LogLevel::info, "Num Tiles", std::to_string(numTiles).c_str());
+	bento::default_logger()->log(bento::LogLevel::info, "Tiles Size X", std::to_string(tilesSize.x).c_str());
+	bento::default_logger()->log(bento::LogLevel::info, "Tiles Size Y", std::to_string(tilesSize.y).c_str());
+	bento::default_logger()->log(bento::LogLevel::info, "Tiles Size Z", std::to_string(tilesSize.z).c_str());
 
 	// Create a command list
 	bento::ComputeCommandList commandList = bento::create_command_list(context, current_alloc);
@@ -82,7 +93,23 @@ int main(int argc, char** argv)
 	bento::Vector<TRay> outputRays(*bento::common_allocator(), numRays);
 	bento::read_buffer(commandList, output_buffer, (unsigned char*)&outputRays[0]);
 
-	// Release all the gpu resources
+	for (uint32_t rayIdx = 0; rayIdx < numRays; ++rayIdx)
+	{
+		const TRay& currentRay = outputRays[rayIdx];
+
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Origin X", std::to_string(currentRay.origin.x).c_str());
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Origin Y", std::to_string(currentRay.origin.y).c_str());
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Origin Z", std::to_string(currentRay.origin.z).c_str());
+
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Direction X", std::to_string(currentRay.direction.x).c_str());
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Direction Y", std::to_string(currentRay.direction.y).c_str());
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation Direction Z", std::to_string(currentRay.direction.z).c_str());
+
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation TMin", std::to_string(currentRay.tmin).c_str());
+		bento::default_logger()->log(bento::LogLevel::info, "Ray Generation TMax", std::to_string(currentRay.tmax).c_str());
+	}
+
+	// Release all the GPU resources
 	bento::destroy_buffer(output_buffer);
 	bento::destroy_kernel(kernel);
 	bento::destroy_program(program);

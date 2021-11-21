@@ -102,8 +102,10 @@ namespace noiseless
 		bento::kernel_argument(_rayGenerationKernel, 1, _computeRayBuffer);
 		bento::kernel_argument(_rayGenerationKernel, 2, sizeof(numRays), (unsigned char*)&numRays);
 
-		// Push the ray generation command
-		bento::dispatch_kernel_1D(_commandList, _rayGenerationKernel, numRays);
+		// Dispatch the task on the GPU
+		bento::IVector3 numTilesParam = { numRays, 1, 1 };
+		bento::IVector3 tileSize = { 1, 1, 1 };
+		dispatch_kernel(_commandList, _rayGenerationKernel, numTilesParam, tileSize);
 
 		// Now that the ray generation is done, let's execute the integration evaluation
 		bento::kernel_argument(_integratorComputeKernel, 0, _computeRayBuffer);
@@ -111,7 +113,7 @@ namespace noiseless
 		bento::kernel_argument(_integratorComputeKernel, 2, _computeColorBuffer);
 
 		// Push the ray integration evaluation kernel
-		bento::dispatch_kernel_1D(_commandList, _integratorComputeKernel, numRays);
+		dispatch_kernel(_commandList, _integratorComputeKernel, numTilesParam, tileSize);
 
 		// Flush and wait for the command queue
 		bento::flush_command_list(_commandList);

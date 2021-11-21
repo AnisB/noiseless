@@ -23,11 +23,11 @@ void nl_scene_set_num_meshes(NLSceneObject* scene, uint32_t numMeshes)
 void nl_scene_set_mesh_data(NLSceneObject* scene, uint32_t meshIndex, float* vertexArray, uint32_t numVerts, int* indicesArray, uint32_t numIndices)
 {
 	noiseless::TScene* scenePtr = (noiseless::TScene*)(scene);
-	noiseless::TMesh& targetMesh = scenePtr->mesh(meshIndex);
-	targetMesh.vertices.resize(numVerts);
-	targetMesh.indices.resize(numIndices);
-	memcpy(targetMesh.vertices.begin(), vertexArray, sizeof(bento::Vector3) * numVerts);
-	memcpy(targetMesh.indices.begin(), indicesArray, sizeof(bento::IVector3) * numIndices);
+	noiseless::TGeometry& targetGeometry = scenePtr->geometry(meshIndex);
+	targetGeometry.vertices.resize(numVerts);
+	targetGeometry.indices.resize(numIndices);
+	memcpy(targetGeometry.vertices.begin(), vertexArray, sizeof(bento::Vector3) * numVerts);
+	memcpy(targetGeometry.indices.begin(), indicesArray, sizeof(bento::IVector3) * numIndices);
 }
 
 // Function to destroy a noiseless scene

@@ -9,9 +9,13 @@ namespace noiseless
 {
 	struct TComputeScene
 	{
-		bento::ComputeBuffer BVH;
+		// Geometry data
 		bento::ComputeBuffer vertices;
 		bento::ComputeBuffer indices;
+
+		// BVH data
+		bento::ComputeBuffer bvhNodes;
+		bento::ComputeBuffer bvhPrimitives;
 	};
 
 	// Request a pointer to the compute scene

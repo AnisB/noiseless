@@ -1,5 +1,5 @@
 // Library includes
-#include "model/mesh.h"
+#include "model/geometry.h"
 
 namespace noiseless
 {

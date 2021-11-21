@@ -2,44 +2,44 @@
 // Structure that defines everything we need for evaluating a ray
 typedef struct __attribute__ ((packed))
 {
-	float4 origin;
-	float4 dir;
-	float tmin;
-	float tmax;
+    float4 origin;
+    float4 dir;
+    float tmin;
+    float tmax;
 } TRay;
 
 // Structure that holds everything relative to camera description
 typedef struct __attribute__ ((packed))
 {
-	float4 origin;
-	float4 ulCorner;
-	float4 dx;
-	float4 dy;
-	uint width;
-	uint height;
-	float nearPlane;
-	float farPlane;
+    float4 origin;
+    float4 ulCorner;
+    float4 dx;
+    float4 dy;
+    uint width;
+    uint height;
+    float nearPlane;
+    float farPlane;
 
 } TCameraSettings;
 
 __kernel void camera_ray_generation(TCameraSettings cameraSettings, __global TRay* outputRayArray, const int numRays)
 {
-	// Fetch the screen rectangle position to
-	int id = get_global_id(0);
-	int num_workers = get_global_size(0);
+    // Fetch the screen rectangle position to
+    int id = get_global_id(0);
+    int num_workers = get_global_size(0);
 
-	// Loop throught the rays
-	for (int rayIndex = id; rayIndex < numRays; rayIndex += num_workers)
-	{
-		// Let's evaluate the pixel indices
-		int screenX = rayIndex / cameraSettings.width;
-		int screenY = rayIndex % cameraSettings.width;
+    // Loop throught the rays
+    for (int rayIndex = id; rayIndex < numRays; rayIndex += num_workers)
+    {
+        // Let's evaluate the pixel indices
+        int screenX = rayIndex / cameraSettings.width;
+        int screenY = rayIndex % cameraSettings.width;
 
-		// Fill the values
-		float4 screenPixelPos = cameraSettings.ulCorner + screenX * cameraSettings.dx + screenY * cameraSettings.dy;
-		outputRayArray[rayIndex].origin = cameraSettings.origin;
-		outputRayArray[rayIndex].dir.xyz = normalize(screenPixelPos.xyz - cameraSettings.origin.xyz);
-		outputRayArray[rayIndex].tmin = cameraSettings.nearPlane;
-		outputRayArray[rayIndex].tmax = cameraSettings.farPlane;
-	}
+        // Fill the values
+        float4 screenPixelPos = cameraSettings.ulCorner + screenX * cameraSettings.dx + screenY * cameraSettings.dy;
+        outputRayArray[rayIndex].origin = cameraSettings.origin;
+        outputRayArray[rayIndex].dir.xyz = normalize(screenPixelPos.xyz - cameraSettings.origin.xyz);
+        outputRayArray[rayIndex].tmin = cameraSettings.nearPlane;
+        outputRayArray[rayIndex].tmax = cameraSettings.farPlane;
+    }
 }

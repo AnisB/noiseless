@@ -45,10 +45,9 @@ if( PLATFORM_WINDOWS )
 endif()
 
 # Find opencl and enable it if possible
-FIND_PACKAGE(OpenCL)
-if (OpenCL_FOUND)
-	add_definitions(-DOPENCL_SUPPORTED)
-endif()
+FIND_PACKAGE(OpenCL REQUIRED 2.0)
+add_definitions(-DOPENCL_SUPPORTED)
+message(STATUS "OpenCL Version: ${OpenCL_VERSION_MAJOR}")
 
 # Find GLEW and enable it if possible
 FIND_PACKAGE(GLEW)
