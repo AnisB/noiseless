@@ -30,7 +30,7 @@ namespace noiseless
 			assert(ps != nullptr);
 
 			// return the primitive count
-			return ps->indicesArray.size() / 3;
+			return ps->indicesArray.size();
 		}
 
 		bento::Box3 box(const bento::bvh::Container* container, uint32_t primitive_idx)
@@ -54,18 +54,28 @@ namespace noiseless
 
 	void release_compute_buffers(TComputeScene& computeScene)
 	{
-		// Destroy the vertex buffer if not null
 		if (computeScene.vertices != 0)
 		{
 			bento::destroy_buffer(computeScene.vertices);
 			computeScene.vertices = 0;
 		}
 
-		// Destroy the index buffer if not null
 		if (computeScene.indices != 0)
 		{
 			bento::destroy_buffer(computeScene.indices);
 			computeScene.indices = 0;
+		}
+
+		if (computeScene.bvhNodes != 0)
+		{
+			bento::destroy_buffer(computeScene.bvhNodes);
+			computeScene.bvhNodes = 0;
+		}
+
+		if (computeScene.bvhPrimitives != 0)
+		{
+			bento::destroy_buffer(computeScene.bvhPrimitives);
+			computeScene.bvhPrimitives = 0;
 		}
 	}
 
@@ -87,10 +97,6 @@ namespace noiseless
 
 	void combine_indices_and_vertices_array(const TScene& scene, bento::Vector<bento::Vector3>& verticesArray, bento::Vector<bento::IVector3>& indicesArray)
 	{
-		// Clear the buffers
-		verticesArray.clear();
-		indicesArray.clear();
-
 		// Fetch the mesh count
 		uint32_t numMeshes = scene.num_meshes();
 
@@ -122,7 +128,7 @@ namespace noiseless
 		}
 	}
 
-	void create_compute_scene(bento::ComputeContext computeContext, const TScene& scene, TComputeScene& outputComputeScene, bento::IAllocator& allocator)
+	void create_compute_scene(bento::ComputeContext computeContext, bento::ComputeCommandList commandList, const TScene& scene, TComputeScene& outputComputeScene, bento::IAllocator& allocator)
 	{
 		// Make sure to release the compute buffers if they have been previously allocated
 		release_compute_buffers(outputComputeScene);
@@ -132,34 +138,38 @@ namespace noiseless
 		uint32_t totalIndexCount = 0;
 		evaluate_indice_and_vertex_count(scene, totalIndexCount, totalVerticeCount);
 
-		// Let's now allocate the combined buffers
-		PackedScene packedScene(allocator);
-		packedScene.verticesArray.resize(totalVerticeCount);
-		packedScene.indicesArray.resize(totalIndexCount);
-		combine_indices_and_vertices_array(scene, packedScene.verticesArray, packedScene.indicesArray);
+		outputComputeScene.numTriangles = totalIndexCount;
+		if (totalIndexCount != 0 && totalVerticeCount != 0)
+		{
+			// Let's now allocate the combined buffers
+			PackedScene packedScene(allocator);
+			packedScene.verticesArray.resize(totalVerticeCount);
+			packedScene.indicesArray.resize(totalIndexCount);
+			combine_indices_and_vertices_array(scene, packedScene.verticesArray, packedScene.indicesArray);
 
-		// Let's now create the compute buffers on GPU side and push the combined array
-		outputComputeScene.vertices = bento::create_buffer(computeContext, totalVerticeCount * sizeof(bento::Vector3), bento::ComputeBufferType::READ_ONLY, allocator);
-		bento::write_buffer(computeContext, outputComputeScene.vertices, (unsigned char*)(packedScene.verticesArray.begin()));
-		outputComputeScene.indices = bento::create_buffer(computeContext, totalIndexCount * sizeof(bento::IVector3), bento::ComputeBufferType::READ_ONLY, allocator);
-		bento::write_buffer(computeContext, outputComputeScene.indices, (unsigned char*)(packedScene.indicesArray.begin()));
-		
-		// Build the accessor to get our scene
-		bento::bvh::Accessor sceneAccessor;
-		sceneAccessor.container = (bento::bvh::Container*)&packedScene;
-		sceneAccessor.num_primitives = packed_scene::num_primitives;
-		sceneAccessor.box = packed_scene::box;
-		sceneAccessor.intersect = nullptr; //  NOT NEEDED FOR NOW
+			// Let's now create the compute buffers on GPU side and push the combined array
+			outputComputeScene.vertices = bento::create_buffer(computeContext, totalVerticeCount * sizeof(bento::Vector3), bento::ComputeBufferType::READ_ONLY, allocator);
+			bento::write_buffer(commandList, outputComputeScene.vertices, (unsigned char*)(packedScene.verticesArray.begin()));
+			outputComputeScene.indices = bento::create_buffer(computeContext, totalIndexCount * sizeof(bento::IVector3), bento::ComputeBufferType::READ_ONLY, allocator);
+			bento::write_buffer(commandList, outputComputeScene.indices, (unsigned char*)(packedScene.indicesArray.begin()));
 
-		// Now we need to build the BVH that we will also need to push on the GPU
-		bento::Bvh bvh(allocator);
-		bento::bvh::build(bvh, sceneAccessor);
+			// Build the accessor to get our scene
+			bento::bvh::Accessor sceneAccessor;
+			sceneAccessor.container = (bento::bvh::Container*)&packedScene;
+			sceneAccessor.num_primitives = packed_scene::num_primitives;
+			sceneAccessor.box = packed_scene::box;
+			sceneAccessor.intersect = nullptr; //  NOT NEEDED FOR NOW
 
-		// Let's now create the compute buffers on GPU side and push the BVH arrays
-		outputComputeScene.bvhNodes = bento::create_buffer(computeContext, bvh.nodes.size() * sizeof(bento::BvhNode), bento::ComputeBufferType::READ_ONLY, allocator);
-		bento::write_buffer(computeContext, outputComputeScene.vertices, (unsigned char*)(bvh.nodes.begin()));
-		outputComputeScene.bvhPrimitives = bento::create_buffer(computeContext, bvh.primitives.size() * sizeof(bento::BvhPrimitive), bento::ComputeBufferType::READ_ONLY, allocator);
-		bento::write_buffer(computeContext, outputComputeScene.bvhPrimitives, (unsigned char*)(bvh.primitives.begin()));
+			// Now we need to build the BVH that we will also need to push on the GPU
+			bento::Bvh bvh(allocator);
+			bento::bvh::build(bvh, sceneAccessor);
+
+			// Let's now create the compute buffers on GPU side and push the BVH arrays
+			outputComputeScene.bvhNodes = bento::create_buffer(computeContext, bvh.nodes.size() * sizeof(bento::BvhNode), bento::ComputeBufferType::READ_ONLY, allocator);
+			bento::write_buffer(commandList, outputComputeScene.bvhNodes, (unsigned char*)(bvh.nodes.begin()));
+			outputComputeScene.bvhPrimitives = bento::create_buffer(computeContext, bvh.primitives.size() * sizeof(bento::BvhPrimitive), bento::ComputeBufferType::READ_ONLY, allocator);
+			bento::write_buffer(commandList, outputComputeScene.bvhPrimitives, (unsigned char*)(bvh.primitives.begin()));
+		}
 	}
 
 	void destroy_compute_scene(TComputeScene& targetComputeScene)

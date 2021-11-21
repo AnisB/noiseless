@@ -1,0 +1,5 @@
+bento_exe("testCompiler" "tests" "testCompiler.cpp" "${NOISELESS_SDK_INCLUDE};${BENTO_SDK_INCLUDE}")
+target_link_libraries("testCompiler" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")
+
+bento_exe("renderer" "applications" "renderer.cpp" "${NOISELESS_SDK_INCLUDE};${BENTO_SDK_INCLUDE}")
+target_link_libraries("renderer" "noiseless_sdk" "bento_sdk" "${OpenCL_LIBRARIES}")

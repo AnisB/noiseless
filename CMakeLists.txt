@@ -4,7 +4,6 @@ project(noiseless)
 # Declare the global variables for the cmake project
 set(BENTO_SDK_ROOT ${PROJECT_SOURCE_DIR}/bento)
 set(NOISELESS_SDK_ROOT ${PROJECT_SOURCE_DIR}/sdk)
-set(NOISELESS_TESTS_ROOT ${PROJECT_SOURCE_DIR}/tests)
 set(NOISELESS_CAPI_ROOT ${PROJECT_SOURCE_DIR}/c_api)
 set(NOISELESS_APPLICATIONS_ROOT ${PROJECT_SOURCE_DIR}/applications)
 set(NOISELESS_3RD_LIBRARIES ${PROJECT_SOURCE_DIR}/3rd)
@@ -41,5 +40,5 @@ add_subdirectory(${NOISELESS_SDK_ROOT}/src)
 # Generate the c api library
 add_subdirectory(${NOISELESS_CAPI_ROOT}/src)
 
-# Adding the tests if we should
-add_subdirectory(${NOISELESS_TESTS_ROOT})
+# Adding the applications if we should
+add_subdirectory(${NOISELESS_APPLICATIONS_ROOT})

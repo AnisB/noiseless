@@ -9,9 +9,18 @@ namespace noiseless
 {
 	struct TComputeScene
 	{
+		TComputeScene()
+		: vertices(0)
+		, indices(0)
+		, bvhNodes(0)
+		, bvhPrimitives(0)
+		{
+		}
+
 		// Geometry data
 		bento::ComputeBuffer vertices;
 		bento::ComputeBuffer indices;
+		uint32_t numTriangles;
 
 		// BVH data
 		bento::ComputeBuffer bvhNodes;
@@ -19,6 +28,6 @@ namespace noiseless
 	};
 
 	// Request a pointer to the compute scene
-	void create_compute_scene(bento::ComputeContext computeContext, const TScene& scene, TComputeScene& outputComputeScene, bento::IAllocator& allocator);
+	void create_compute_scene(bento::ComputeContext computeContext, bento::ComputeCommandList commandList, const TScene& scene, TComputeScene& outputComputeScene, bento::IAllocator& allocator);
 	void destroy_compute_scene(TComputeScene& targetComputeScene);
 }

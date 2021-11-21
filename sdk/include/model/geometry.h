@@ -19,7 +19,7 @@ namespace noiseless
 
 		uint32_t numTriangles() 
 		{
-			return indices.size() / 3;
+			return indices.size();
 		}
 		
 		bento::Vector<bento::Vector3> vertices;

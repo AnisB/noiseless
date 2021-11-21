@@ -1,0 +1,88 @@
+// Structure that holds everything relative to camera description
+typedef struct __attribute__ ((packed))
+{
+    float4 origin;
+    float4 ulCorner;
+    float4 dx;
+    float4 dy;
+    uint width;
+    uint height;
+    float nearPlane;
+    float farPlane;
+
+} TCameraSettings;
+
+// Structure that defines everything we need for evaluating a ray
+typedef struct _st_TRay
+{
+    float4 origin;
+    float4 dir;
+    float tmin;
+    float tmax;
+} TRay;
+
+bool intersect(float3 rayOrigin, float3 rayDirection, float3 p0, float3 p1, float3 p2, float* dist)
+{
+    float3 e_1 = p1 - p0;
+    float3 e_2 = p2 - p0;
+    float3 u_normal = cross(e_1, e_2);
+    float3 q = cross(rayDirection, e_2);
+    float det = dot(e_1, q);
+
+    if ((dot(u_normal, rayDirection) >= 0) || (fabs(det) <= FLT_EPSILON)) 
+        return false;
+    float3 s = (rayOrigin - p0) / det;
+    float3 r = cross(s, e_1);
+
+    float u = dot(s, q);
+    float v = dot(r, rayDirection);
+    float w = 1.0f - u - v;
+
+    if ((u < 0.0f) || (v < 0.0f) || (w < 0.0f)) 
+        return false;
+
+    float candidate_dist = dot(e_2, r);
+
+    if (candidate_dist >= 0.0f && candidate_dist <= (*dist)) 
+    {
+        (*dist) = candidate_dist;
+        return true;
+    }
+    return false;
+}
+
+__kernel void trace(TCameraSettings cameraSettings,
+                                    __global float3* vertexArray,
+                                    __global uint3* indexArray,
+                                    const uint numTriangles,
+                                    __global float4* outputColor)
+{
+    // Fetch the id of the ray we shall be processing
+    int rayIndex = get_global_id(0);
+
+    // Compute the screen coordinates from the ray nidex
+    int screenX = rayIndex / cameraSettings.width;
+    int screenY = rayIndex % cameraSettings.width;
+
+    // Build the ray we need to be throwing
+    float4 screenPixelPos = cameraSettings.ulCorner + screenX * cameraSettings.dx + screenY * cameraSettings.dy;
+    TRay targetRay;
+    targetRay.origin = cameraSettings.origin;
+    targetRay.dir.xyz = normalize(screenPixelPos.xyz - cameraSettings.origin.xyz);
+    targetRay.tmin = cameraSettings.nearPlane;
+    targetRay.tmax = cameraSettings.farPlane;
+
+    bool valid= false;
+    float dist = cameraSettings.farPlane;
+    for(int i = 0; i < numTriangles; ++i)
+    {
+        uint3 triangleIndices = indexArray[i];
+        if(intersect(targetRay.origin.xyz, targetRay.dir.xyz, vertexArray[triangleIndices.x], vertexArray[triangleIndices.y], vertexArray[triangleIndices.z], &dist))
+        {
+            valid = true;
+            break;
+        }
+    }
+
+    outputColor[rayIndex] = valid ? (float4)(1.0, 0.0, 0.0, 1.0) : (float4)(0.0, 0.0, 0.0, 1.0);
+}

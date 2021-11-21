@@ -10,11 +10,11 @@
 
 namespace noiseless
 {
-	class TIntegrator
+	class TPathTracer
 	{
 	public:
-		TIntegrator(bento::IAllocator& allocator);
-		~TIntegrator();
+		TPathTracer(bento::IAllocator& allocator);
+		~TPathTracer();
 
 		// Allocate/Release the resources
 		void init_resources(const bento::TAssetDatabase& assetDatabase);
@@ -40,21 +40,16 @@ namespace noiseless
 		// Keep track of the CommandList
 		bento::ComputeCommandList _commandList;
 
-		// Program to generate the rays
-		bento::ComputeProgram _rayGenerationProgram;
-		bento::ComputeKernel _rayGenerationKernel;
-
 		// Program to evaluate the integration
-		bento::ComputeProgram	_integratorComputeProgram;
-		bento::ComputeKernel	_integratorComputeKernel;
+		bento::ComputeProgram	_pathTracerComputeProgram;
+		bento::ComputeKernel	_pathTracerComputeKernel;
 
 		// The target scene for the integration
-		TComputeScene	_computeScene;
+		TComputeScene _computeScene;
 
 		// The render target for the integrator
 		uint32_t _width;
 		uint32_t _height;
-		bento::ComputeBuffer _computeRayBuffer;
 		bento::ComputeBuffer _computeColorBuffer;
 
 	public:
